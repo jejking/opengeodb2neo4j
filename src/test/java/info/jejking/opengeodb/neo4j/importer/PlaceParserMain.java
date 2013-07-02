@@ -21,25 +21,28 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Driver class for {@link PlaceParser}.
+ * 
  * @author jejking
  */
 public class PlaceParserMain {
 
+    private static final Logger LOGGER = Logger.getLogger(PlaceParserMain.class.getName());
+    
     /**
-     * Parses a tab-delimited file of place data whose path is
-     * specified by the first argument.
+     * Parses a tab-delimited file of place data whose path is specified by the first argument.
      * 
      * @param args
-     * @throws IOException 
+     * @throws IOException
      */
     public static void main(String[] args) throws IOException {
-	PlaceParser pp = new PlaceParser();
-	InputStream is = new FileInputStream(args[0]);
-	List<PlaceBean> data = pp.readDataFromStream(is);
-	System.out.println(String.format("Read %d records from file %s", data.size(), args[0]));
+        PlaceParser pp = new PlaceParser();
+        InputStream is = new FileInputStream(args[0]);
+        List<PlaceBean> data = pp.readDataFromStream(is);
+        LOGGER.info(String.format("Read %d records from file %s", data.size(), args[0]));
     }
 
 }

@@ -37,7 +37,7 @@ public abstract class AbstractGraphDbTest {
      * Constructor.
      */
     public AbstractGraphDbTest() {
-	super();
+        super();
     }
 
     /**

@@ -21,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Driver class for {@link PlzParser}.
@@ -29,18 +30,19 @@ import java.util.List;
  */
 public class PlzParserMain {
 
+    private static final Logger LOGGER = Logger.getLogger(PlzParserMain.class.getName());
+    
     /**
-     * Parses data from tab-delimited file whose path is specified
-     * by the first argument.
+     * Parses data from tab-delimited file whose path is specified by the first argument.
      * 
      * @param args
      * @throws IOException
      */
     public static void main(String[] args) throws IOException {
-	PlzParser pp = new PlzParser();
-	InputStream is = new FileInputStream(args[0]);
-	List<PlzTabBean> data = pp.readDataFromStream(is);
-	System.out.println(String.format("Read %d records from file %s", data.size(), args[0]));
+        PlzParser pp = new PlzParser();
+        InputStream is = new FileInputStream(args[0]);
+        List<PlzTabBean> data = pp.readDataFromStream(is);
+        LOGGER.info(String.format("Read %d records from file %s", data.size(), args[0]));
     }
 
 }

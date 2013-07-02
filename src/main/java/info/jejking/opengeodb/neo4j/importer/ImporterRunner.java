@@ -19,27 +19,31 @@ import java.io.IOException;
 
 /**
  * Main entry point into the application.
+ * 
  * @author jejking
- *
+ * 
  */
 public class ImporterRunner {
 
     /**
      * Runs the importer.
      * 
-     * <p>Supply the following arguments:</p>
+     * <p>
+     * Supply the following arguments:
+     * </p>
      * <ol>
      * <li>path to the tab-delimited place file</li>
      * <li>path to the tab-delimited postal code file</li>
      * <li>path to the directory where the Graph DB is to be found/created</li>
      * </ol>
      * 
-     * @param args as above
-     * @throws IOException 
+     * @param args
+     *            as above
+     * @throws IOException
      */
     public static void main(String[] args) throws IOException {
-	Importer importer = new Importer();
-	importer.doImport(args[0], args[1], args[2]);
+        Importer importer = new Importer();
+        importer.doImport(args[0], args[1], args[2]);
     }
 
 }

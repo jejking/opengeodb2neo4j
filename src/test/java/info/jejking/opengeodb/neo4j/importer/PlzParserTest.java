@@ -34,42 +34,39 @@ import org.junit.Test;
 public class PlzParserTest {
 
     PlzParser parser = new PlzParser();
-    
+
     List<PlzTabBean> expectedData;
     List<PlzTabBean> actualData;
-    
+
     @Test
     public void test() throws IOException {
-	
-	givenExpectedData();
-	
-	whenTheStreamIsParsed();
-	
-	thenTheDataIsAsExpected();
-    }
 
+        givenExpectedData();
+
+        whenTheStreamIsParsed();
+
+        thenTheDataIsAsExpected();
+    }
 
     private void thenTheDataIsAsExpected() {
-	assertNotNull(this.actualData);
-	assertEquals(this.expectedData.size(), this.actualData.size());
-	for (PlzTabBean bean : this.expectedData) {
-	    assertTrue("Could not find: " + bean, this.actualData.contains(bean));
-	}
+        assertNotNull(this.actualData);
+        assertEquals(this.expectedData.size(), this.actualData.size());
+        for (PlzTabBean bean : this.expectedData) {
+            assertTrue("Could not find: " + bean, this.actualData.contains(bean));
+        }
     }
-
 
     private void whenTheStreamIsParsed() throws IOException {
-	InputStream testDataStream = PlzParserTest.class.getResourceAsStream("/PLZ.tab.txt");
-	this.actualData = this.parser.readDataFromStream(testDataStream);
+        InputStream testDataStream = PlzParserTest.class.getResourceAsStream("/PLZ.tab.txt");
+        this.actualData = this.parser.readDataFromStream(testDataStream);
     }
 
-
     private void givenExpectedData() {
-	List<PlzTabBean> list = new ArrayList<>(2);
-	list.add(new PlzTabBean(5078, "01067", 13.7210676148814d, 51.0600336463379d, "Dresden"));
-	list.add(new PlzTabBean(5079, "01069", 13.7389066401609d, 51.039558876083d, "Dresden"));
-	
-	this.expectedData = list;
+        List<PlzTabBean> list = new ArrayList<>(2);
+        list.add(new PlzTabBean(5078, "01067", 13.7210676148814d, 51.0600336463379d, "Dresden"));
+        list.add(new PlzTabBean(5079, "01069", 13.7389066401609d, 51.039558876083d, "Dresden"));
+
+        this.expectedData = list;
     }
 
 }

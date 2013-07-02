@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -32,14 +34,15 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
 
 /**
- * Class which integrates the parsers together with the node and 
- * relationship builders to turn the TAB-separated exports from
- * OpenGeoDB into a Neo4j graph database.
+ * Class which integrates the parsers together with the node and relationship builders to turn the TAB-separated exports
+ * from OpenGeoDB into a Neo4j graph database.
  * 
  * @author jejking
- *
+ * 
  */
 public class Importer {
+
+    private static final Logger LOGGER = Logger.getLogger(Importer.class.getName());
 
     private List<PlaceBean> placeBeans;
     private List<PlzTabBean> plzBeans;
@@ -49,120 +52,123 @@ public class Importer {
     private Map<String, Node> plzNodeMap;
 
     /**
-     * Parses the files, assembles in memory bean representations, converts these
-     * beans to Neo4j {@link Node} instances and links them together appropriately 
-     * with Neo4j {@link Relationship} instances.
+     * Parses the files, assembles in memory bean representations, converts these beans to Neo4j {@link Node} instances
+     * and links them together appropriately with Neo4j {@link Relationship} instances.
      * 
-     * @param placeFile path to file with tab-delimited place data
-     * @param plzFile path to file with tab-delimited postal code data
-     * @param dbDir directory in which to create the Neo4J graph database
-     * @throws IOException on io problems
+     * @param placeFile
+     *            path to file with tab-delimited place data
+     * @param plzFile
+     *            path to file with tab-delimited postal code data
+     * @param dbDir
+     *            directory in which to create the Neo4J graph database
+     * @throws IOException
+     *             on io problems
      */
     public void doImport(String placeFile, String plzFile, String dbDir) throws IOException {
-	parsePlaces(placeFile);
-	parsePlz(plzFile);
-	
-	createDatabase(dbDir);
-	
-	// currently runs in separate transactions in order to keep memory overhead
-	// for the Neo4j tx processing under control
-	// TODO consider using bulk importer
-	doInTransaction(new Runnable() {
-	    
-	    @Override
-	    public void run() {
-		createPlaceNodes();
-		System.out.println("Created place nodes");
-	    }
-	});
-	
-	doInTransaction(new Runnable() {
-	    
-	    @Override
-	    public void run() {
-		createPlzNodes();
-		System.out.println("Created plz nodes");
-	    }
-	});
-	
-	doInTransaction(new Runnable() {
-	    
-	    @Override
-	    public void run() {
-		createRelationships();
-		System.out.println("Created relationships");
-	    }
-	});
-	
-	System.out.println("Done!");
+        LOGGER.info("Starting import");
+        parsePlaces(placeFile);
+        parsePlz(plzFile);
+
+        createDatabase(dbDir);
+
+        // currently runs in separate transactions in order to keep memory overhead
+        // for the Neo4j tx processing under control
+        // TODO consider using bulk importer
+        doInTransaction(new Runnable() {
+
+            @Override
+            public void run() {
+                createPlaceNodes();
+                LOGGER.info("Created place nodes");
+            }
+        });
+
+        doInTransaction(new Runnable() {
+
+            @Override
+            public void run() {
+                createPlzNodes();
+                LOGGER.info("Created plz nodes");
+            }
+        });
+
+        doInTransaction(new Runnable() {
+
+            @Override
+            public void run() {
+                createRelationships();
+                LOGGER.info("Created relationships");
+            }
+        });
+
+        LOGGER.info("Done!");
     }
 
     private void doInTransaction(Runnable runnable) {
-	Transaction tx = graphDb.beginTx();
-	try {
-	    runnable.run();
-	    tx.success();
-	} catch (Exception e) {
-	    e.printStackTrace();
-	    System.err.println("Tx failure");
-	    tx.failure();
-	} finally {
-	    tx.finish();
-	}
-	
+        Transaction tx = graphDb.beginTx();
+        try {
+            runnable.run();
+            tx.success();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Transaction Failed", e);
+            tx.failure();
+        } finally {
+            tx.finish();
+        }
+
     }
 
     private void createPlaceNodes() {
-	PlaceNodeMapper placeNodeMapper = new PlaceNodeMapper();
-	this.placeNodeMap = new HashMap<>();
-	for (PlaceBean placeBean : this.placeBeans) {
-	    Node placeNode = placeNodeMapper.createPlaceNode(graphDb, nodeIndex, placeBean);
-	    this.placeNodeMap.put(placeBean.getId(), placeNode);
-	}
+        PlaceNodeMapper placeNodeMapper = new PlaceNodeMapper();
+        this.placeNodeMap = new HashMap<>();
+        for (PlaceBean placeBean : this.placeBeans) {
+            Node placeNode = placeNodeMapper.createPlaceNode(graphDb, nodeIndex, placeBean);
+            this.placeNodeMap.put(placeBean.getId(), placeNode);
+        }
     }
 
     private void createPlzNodes() {
-	PlzNodeMapper plzNodeMapper = new PlzNodeMapper();
-	this.plzNodeMap = new HashMap<>();
-	for (PlzTabBean plzBean : this.plzBeans) {
-	    Node plzNode = plzNodeMapper.createPlzNode(graphDb, nodeIndex, plzBean);
-	    this.plzNodeMap.put(plzBean.getPlz(), plzNode);
-	}
+        PlzNodeMapper plzNodeMapper = new PlzNodeMapper();
+        this.plzNodeMap = new HashMap<>();
+        for (PlzTabBean plzBean : this.plzBeans) {
+            Node plzNode = plzNodeMapper.createPlzNode(graphDb, nodeIndex, plzBean);
+            this.plzNodeMap.put(plzBean.getPlz(), plzNode);
+        }
     }
 
     private void createRelationships() {
-	PlaceRelationshipBuilder prb = new PlaceRelationshipBuilder();
-	for (PlaceBean placeBean : this.placeBeans) {
-	    prb.buildRelationshipsForPlace(graphDb, placeNodeMap, plzNodeMap, placeBean);
-	}
+        PlaceRelationshipBuilder prb = new PlaceRelationshipBuilder();
+        for (PlaceBean placeBean : this.placeBeans) {
+            prb.buildRelationshipsForPlace(graphDb, placeNodeMap, plzNodeMap, placeBean);
+        }
     }
 
     private void createDatabase(String dbDir) {
-	this.graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(dbDir);
-        this.nodeIndex = graphDb.index().forNodes( "nodes" );
-        
+        this.graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(dbDir);
+        this.nodeIndex = graphDb.index().forNodes("nodes");
+
         // and register shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread() {
+
             @Override
-            public void run()
-            {
+            public void run() {
                 graphDb.shutdown();
-                System.out.println("Shutdown graph db instance");
+                LOGGER.info("Shutdown graph db instance");
             }
         });
+        LOGGER.info("Created graph db in directory " + dbDir);
     }
 
     private void parsePlz(String plzFile) throws IOException {
-	PlzParser plzParser = new PlzParser();
-	this.plzBeans = plzParser.readDataFromStream(new FileInputStream(plzFile));
-	System.out.println("read in plz from: " + plzFile);
+        PlzParser plzParser = new PlzParser();
+        this.plzBeans = plzParser.readDataFromStream(new FileInputStream(plzFile));
+        LOGGER.info("read in plz from: " + plzFile);
     }
 
     private void parsePlaces(String placeFile) throws IOException {
-	PlaceParser placeParser = new PlaceParser();
-	this.placeBeans = placeParser.readDataFromStream(new FileInputStream(placeFile));
-	System.out.println("read in places from: " + placeFile);
+        PlaceParser placeParser = new PlaceParser();
+        this.placeBeans = placeParser.readDataFromStream(new FileInputStream(placeFile));
+        LOGGER.info("read in places from: " + placeFile);
     }
-    
 
 }

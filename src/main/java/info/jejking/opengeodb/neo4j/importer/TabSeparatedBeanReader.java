@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import org.supercsv.cellprocessor.ift.CellProcessor;
 import org.supercsv.exception.SuperCsvException;
@@ -29,72 +30,76 @@ import org.supercsv.io.ICsvBeanReader;
 import org.supercsv.prefs.CsvPreference;
 
 /**
- * Class to help read in data in tab-separated format, wrapping some functionality
- * of <a href="http://supercsv.sourceforge.net/">SuperCSV</a>.
+ * Class to help read in data in tab-separated format, wrapping some functionality of <a
+ * href="http://supercsv.sourceforge.net/">SuperCSV</a>.
  * 
  * @author jejking
- * @param <T> the type of bean
+ * @param <T>
+ *            the type of bean
  */
 class TabSeparatedBeanReader<T> {
 
+    private static final Logger LOGGER = Logger.getLogger(TabSeparatedBeanReader.class.getName());
+    
     private final Class<T> clazz;
     private final CellProcessor[] cellProcessors;
     private final String[] headers;
-    
+
     /**
-     * Constructs reader with details of class to process, the necessary
-     * {@link CellProcessor} instances and the necessary headers.
+     * Constructs reader with details of class to process, the necessary {@link CellProcessor} instances and the
+     * necessary headers.
      * 
-     * @param clazz the class to process
-     * @param cellProcessors the cell processors
-     * @param headers the headers
+     * @param clazz
+     *            the class to process
+     * @param cellProcessors
+     *            the cell processors
+     * @param headers
+     *            the headers
      */
-    public TabSeparatedBeanReader(Class<T> clazz, CellProcessor[] cellProcessors,
-	    String[] headers) {
-	super();
-	this.clazz = clazz;
-	this.cellProcessors = cellProcessors;
-	this.headers = headers;
+    public TabSeparatedBeanReader(Class<T> clazz, CellProcessor[] cellProcessors, String[] headers) {
+        super();
+        this.clazz = clazz;
+        this.cellProcessors = cellProcessors;
+        this.headers = headers;
     }
-
-
 
     /**
      * Reads in a list of T from a tab separated stream.
      * 
-     * @param stream the stream, will be closed when finished with
-     * @param readFirstLine whether the first line of the file should be considered part of the 
-     * 			data to process or not
+     * @param stream
+     *            the stream, will be closed when finished with
+     * @param readFirstLine
+     *            whether the first line of the file should be considered part of the data to process or not
      * @return list of T
-     * @throws IOException on IO problems
+     * @throws IOException
+     *             on IO problems
      */
     public List<T> readDataFromStream(InputStream stream, boolean readFirstLine) throws IOException {
-	
-	List<T> typeBeans = new LinkedList<>();
-	try (ICsvBeanReader beanReader = new CsvBeanReader(new BufferedReader(new InputStreamReader(stream)), CsvPreference.TAB_PREFERENCE)) {
-	    if (readFirstLine) {
-		beanReader.getHeader(true);
-	    }
-	    T typeBean;
-	    boolean carryOn = true;
-            while(carryOn) {
-        	try {
-        	    typeBean = beanReader.read(clazz, headers, cellProcessors);
-        	    if (typeBean != null) {
-        		typeBeans.add(typeBean);
-        	    } else {
-        		carryOn = false;
-        	    }
-        	} catch (SuperCsvException e) {
-        	    // we need this as the data file MAY contain rubbish
-        	    System.err.println("Ignoring data error in line: " + beanReader.getLineNumber());
-        	}
-        	
+
+        List<T> typeBeans = new LinkedList<>();
+        try (ICsvBeanReader beanReader = new CsvBeanReader(new BufferedReader(new InputStreamReader(stream)),
+                CsvPreference.TAB_PREFERENCE)) {
+            if (readFirstLine) {
+                beanReader.getHeader(true);
             }
-	}
-	return typeBeans;
+            T typeBean;
+            boolean carryOn = true;
+            while (carryOn) {
+                try {
+                    typeBean = beanReader.read(clazz, headers, cellProcessors);
+                    if (typeBean != null) {
+                        typeBeans.add(typeBean);
+                    } else {
+                        carryOn = false;
+                    }
+                } catch (SuperCsvException e) {
+                    // we need this as the data file MAY contain rubbish
+                    LOGGER.warning("Ignoring data error in line: " + beanReader.getLineNumber());
+                }
+
+            }
+        }
+        return typeBeans;
     }
-    
-    
-    
+
 }
