@@ -17,6 +17,14 @@ package info.jejking.opengeodb.neo4j.importer;
 
 import java.io.IOException;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 /**
  * Main entry point into the application.
  * 
@@ -25,25 +33,69 @@ import java.io.IOException;
  */
 public class ImporterRunner {
 
-    /**
-     * Runs the importer.
-     * 
-     * <p>
-     * Supply the following arguments:
-     * </p>
-     * <ol>
-     * <li>path to the tab-delimited place file</li>
-     * <li>path to the tab-delimited postal code file</li>
-     * <li>path to the directory where the Graph DB is to be found/created</li>
-     * </ol>
-     * 
-     * @param args
-     *            as above
-     * @throws IOException
-     */
-    public static void main(String[] args) throws IOException {
-        Importer importer = new Importer();
-        importer.doImport(args[0], args[1], args[2]);
-    }
+	private static final Options options = new Options();
+
+	/**
+	 * Runs the importer.
+	 * 
+	 * <p>
+	 * Supply the following arguments:
+	 * </p>
+	 * <ol>
+	 * <li>path to the tab-delimited place file</li>
+	 * <li>path to the tab-delimited postal code file</li>
+	 * <li>path to the directory where the Graph DB is to be found/created</li>
+	 * </ol>
+	 * 
+	 * @param args
+	 *            as above
+	 * @throws IOException
+	 * @throws ParseException 
+	 */
+	public static void main(String[] args) throws IOException, ParseException {
+
+		initOptions();
+
+		CommandLineParser parser = new GnuParser();
+        CommandLine commandLine = parser.parse(options, args);
+		
+        if (commandLine.hasOption("h")) {
+            HelpFormatter helpFormatter = new HelpFormatter();
+            helpFormatter.printHelp("opengeodb2neo4j", options);
+        } else {
+        	String placeFilePath = commandLine.getOptionValue("p");
+        	String zipFilePath = commandLine.getOptionValue("z");
+        	String neo4jDirPath = commandLine.getOptionValue("n");
+        	Importer importer = new Importer();
+        	importer.doImport(placeFilePath, zipFilePath, neo4jDirPath);
+        }
+		
+	}
+
+	@SuppressWarnings("static-access")
+	private static void initOptions() {
+		options.addOption(OptionBuilder
+							.withLongOpt("placeFile")
+							.withArgName("placeFilePath")
+							.hasArg()
+							.withDescription("path to tab delimited place file")
+							.create("p"));
+
+		options.addOption(OptionBuilder
+							.withLongOpt("zipCodesFile")
+							.withArgName("zipCodesFilePath")
+							.hasArg()
+							.withDescription("path to tab delimited zip code (PLZ) file")
+							.create("z"));
+
+		options.addOption(OptionBuilder
+							.withLongOpt("neoDir")
+							.withArgName("neoDirPath")
+							.hasArg()
+							.withDescription("path to directory in which to create neo4j database")
+							.create("n"));
+
+		options.addOption("h", "help", false, "prints this message");
+	}
 
 }
