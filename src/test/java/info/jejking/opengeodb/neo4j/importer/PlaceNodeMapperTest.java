@@ -17,12 +17,16 @@ package info.jejking.opengeodb.neo4j.importer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import info.jejking.opengeodb.neo4j.importer.OpenGeoDbProperties.PlaceNodeProperties;
 import info.jejking.opengeodb.neo4j.importer.PlaceParser.PlaceBean;
 
 import org.junit.Test;
+import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.index.IndexHits;
 
 /**
  * Basic test of {@link PlaceNodeMapper}.
@@ -48,19 +52,19 @@ public class PlaceNodeMapperTest extends AbstractGraphDbTest {
     }
 
     private void thenTheDataMatches() {
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.LOC_ID.name()), 17838);
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.AGS.name()), "02000000");
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.ASCII.name()), "HAMBURG");
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.NAME.name()), "Hamburg");
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.LATITUDE.name()), 53.554423d);
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.LONGITUDE.name()), 9.994583d);
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.DIALING_CODE.name()), "040");
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.POPULATION.name()), 1734830);
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.AREA.name()), 755.0);
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.LEVEL.name()), 6);
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.TYPE.name()),
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.LOC_ID.name()), 17838);
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.AGS.name()), "02000000");
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.ASCII.name()), "HAMBURG");
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.NAME.name()), "Hamburg");
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.LATITUDE.name()), 53.554423d);
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.LONGITUDE.name()), 9.994583d);
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.DIALING_CODE.name()), "040");
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.POPULATION.name()), 1734830);
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.AREA.name()), 755.0);
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.LEVEL.name()), 6);
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.TYPE.name()),
                 "Freie und Hansestadt");
-        assertEquals(this.placeNode.getProperty(PlaceNodeMapper.PlaceNodeProperties.NUMBER_PLATE_CODE.name()), "HH");
+        assertEquals(this.placeNode.getProperty(PlaceNodeProperties.NUMBER_PLATE_CODE.name()), "HH");
     }
 
     private void givenAPlaceBean() {
@@ -87,7 +91,7 @@ public class PlaceNodeMapperTest extends AbstractGraphDbTest {
     private void whenTheNodeIsCreated() {
         Transaction tx = this.graphDb.beginTx();
         try {
-            this.placeNode = this.placeNodeMapper.createPlaceNode(graphDb, nodeIndex, placeBean);
+            this.placeNode = this.placeNodeMapper.createPlaceNode(graphDb, placeBean);
             tx.success();
         } catch (Exception e) {
             tx.failure();
@@ -103,12 +107,32 @@ public class PlaceNodeMapperTest extends AbstractGraphDbTest {
     }
 
     private void thenItIsIndexed() {
-        IndexHits<Node> foundByLocId = this.nodeIndex.query(PlaceNodeMapper.PlaceNodeProperties.LOC_ID.name(),
-                Integer.valueOf(17838));
-        assertEquals(1, foundByLocId.size());
-
-        IndexHits<Node> foundByName = this.nodeIndex.query(PlaceNodeMapper.PlaceNodeProperties.NAME.name(), "Hamburg");
-        assertEquals(1, foundByName.size());
+        Label placeLabel = DynamicLabel.label(OpenGeoDbProperties.PLACE_LABEL);
+        Label openGeoDbLocLabel = DynamicLabel.label(OpenGeoDbProperties.OPENGEO_DB_LOCATION);
+        ResourceIterator<Node> placesById = graphDb
+                                            .findNodesByLabelAndProperty(
+                                                openGeoDbLocLabel, 
+                                                OpenGeoDbProperties.LOC_ID,
+                                                17838)
+                                            .iterator();
+        
+        try {
+            assertTrue(placesById.hasNext());
+        } finally {
+            placesById.close();
+        }
+        
+        ResourceIterator<Node> placesByName = graphDb
+                                                .findNodesByLabelAndProperty(
+                                                        placeLabel, 
+                                                        OpenGeoDbProperties.PlaceNodeProperties.NAME.name(), 
+                                                        "Hamburg")
+                                                .iterator();
+        try {
+            assertTrue(placesByName.hasNext());
+        } finally {
+            placesByName.close();
+        }
     }
 
 }

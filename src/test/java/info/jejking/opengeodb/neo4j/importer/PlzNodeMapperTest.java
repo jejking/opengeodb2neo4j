@@ -15,12 +15,15 @@
  */
 package info.jejking.opengeodb.neo4j.importer;
 
+import info.jejking.opengeodb.neo4j.importer.OpenGeoDbProperties.PlzProperties;
 import info.jejking.opengeodb.neo4j.importer.PlzParser.PlzTabBean;
 
 import org.junit.Test;
+import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.index.IndexHits;
 
 import static org.junit.Assert.*;
 
@@ -54,7 +57,7 @@ public class PlzNodeMapperTest extends AbstractGraphDbTest {
     private void whenTheNodeIsCreated() {
         Transaction tx = this.graphDb.beginTx();
         try {
-            this.plzNode = this.plzMapper.createPlzNode(graphDb, nodeIndex, plzBean);
+            this.plzNode = this.plzMapper.createPlzNode(graphDb, plzBean);
             tx.success();
         } catch (Exception e) {
             tx.failure();
@@ -70,19 +73,42 @@ public class PlzNodeMapperTest extends AbstractGraphDbTest {
     }
 
     private void thenItIsIndexed() {
-        IndexHits<Node> hits1 = this.nodeIndex.get(PlzNodeMapper.PlzProperties.LOC_ID.name(), 5078);
-        assertEquals(1, hits1.size());
+        
+        Label plzLabel = DynamicLabel.label(OpenGeoDbProperties.POSTAL_CODE_LABEL);
+        Label openGeoDbLocLabel = DynamicLabel.label(OpenGeoDbProperties.OPENGEO_DB_LOCATION);
+        ResourceIterator<Node> plzById = graphDb
+                                            .findNodesByLabelAndProperty(
+                                                openGeoDbLocLabel, 
+                                                OpenGeoDbProperties.LOC_ID,
+                                                5078)
+                                            .iterator();
+        
+        try {
+            assertTrue(plzById.hasNext());
+        } finally {
+            plzById.close();
+        }
+        
+        ResourceIterator<Node> plzByPlz = graphDb
+                                                .findNodesByLabelAndProperty(
+                                                        plzLabel, 
+                                                        OpenGeoDbProperties.PlzProperties.POSTAL_CODE.name(), 
+                                                        "01067")
+                                                .iterator();
+        try {
+            assertTrue(plzByPlz.hasNext());
+        } finally {
+            plzByPlz.close();
+        }
 
-        IndexHits<Node> hits2 = this.nodeIndex.get(PlzNodeMapper.PlzProperties.POSTAL_CODE.name(), "01067");
-        assertEquals(1, hits2.size());
     }
 
     private void thenTheDataMatches() {
-        assertEquals(this.plzBean.getId(), this.plzNode.getProperty(PlzNodeMapper.PlzProperties.LOC_ID.name()));
-        assertEquals(this.plzBean.getPlz(), this.plzNode.getProperty(PlzNodeMapper.PlzProperties.POSTAL_CODE.name()));
-        assertEquals(this.plzBean.getLat(), this.plzNode.getProperty(PlzNodeMapper.PlzProperties.LATITUDE.name()));
-        assertEquals(this.plzBean.getLon(), this.plzNode.getProperty(PlzNodeMapper.PlzProperties.LONGITUDE.name()));
+        assertEquals(this.plzBean.getId(), this.plzNode.getProperty(PlzProperties.LOC_ID.name()));
+        assertEquals(this.plzBean.getPlz(), this.plzNode.getProperty(PlzProperties.POSTAL_CODE.name()));
+        assertEquals(this.plzBean.getLat(), this.plzNode.getProperty(PlzProperties.LATITUDE.name()));
+        assertEquals(this.plzBean.getLon(), this.plzNode.getProperty(PlzProperties.LONGITUDE.name()));
         assertEquals(this.plzBean.getPlaceName(),
-                this.plzNode.getProperty(PlzNodeMapper.PlzProperties.PLACE_NAME.name()));
+                this.plzNode.getProperty(PlzProperties.PLACE_NAME.name()));
     }
 }

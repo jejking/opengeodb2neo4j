@@ -15,20 +15,23 @@
  */
 package info.jejking.opengeodb.neo4j.importer;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import info.jejking.opengeodb.neo4j.importer.PlaceParser.PlaceBean;
 import info.jejking.opengeodb.neo4j.importer.PlaceRelationshipBuilder.Relationships;
 import info.jejking.opengeodb.neo4j.importer.PlzParser.PlzTabBean;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.junit.Test;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
-
-import static org.junit.Assert.*;
 
 /**
  * Basic test of {@link PlaceRelationshipBuilder}.
@@ -70,14 +73,16 @@ public class PlaceRelationshipBuilderTest extends AbstractGraphDbTest {
     }
 
     private void thenPostalCodeRelationshipsExist(PlaceBean place, PlzTabBean... plzBeans) {
-        Node placeNode = nodeIndex.get(PlaceNodeMapper.PlaceNodeProperties.LOC_ID.name(), place.getId()).getSingle();
+        Node placeNode = lookUpPlaceByLocId(place);
 
         for (PlzTabBean plzBean : plzBeans) {
-            Node plzNode = nodeIndex.get(PlzNodeMapper.PlzProperties.POSTAL_CODE.name(), plzBean.getPlz()).getSingle();
+            Node plzNode = lookUpPostalCodeByPlz(plzBean);
             // is plz linked to place via POSTAL_CODE_FOR ?
             assertTrue(nodesAreRelated(plzNode, placeNode, PlaceRelationshipBuilder.Relationships.POSTAL_CODE_FOR));
         }
     }
+
+
 
     private boolean nodesAreRelated(Node from, Node to, Relationships relationship) {
 
@@ -113,7 +118,7 @@ public class PlaceRelationshipBuilderTest extends AbstractGraphDbTest {
         PlzNodeMapper plzNodeMapper = new PlzNodeMapper();
         try {
             for (PlzTabBean plzBean : plzBeans) {
-                Node plzNode = plzNodeMapper.createPlzNode(graphDb, nodeIndex, plzBean);
+                Node plzNode = plzNodeMapper.createPlzNode(graphDb, plzBean);
                 this.plzNodeMap.put(plzBean.getPlz(), plzNode);
             }
             tx.success();
@@ -132,7 +137,7 @@ public class PlaceRelationshipBuilderTest extends AbstractGraphDbTest {
         PlaceNodeMapper placeNodeMapper = new PlaceNodeMapper();
         try {
             for (PlaceBean bean : beans) {
-                Node placeNode = placeNodeMapper.createPlaceNode(graphDb, nodeIndex, bean);
+                Node placeNode = placeNodeMapper.createPlaceNode(graphDb, bean);
                 this.placeNodeMap.put(bean.getId(), placeNode);
             }
             tx.success();
@@ -196,8 +201,8 @@ public class PlaceRelationshipBuilderTest extends AbstractGraphDbTest {
 
     private void thenPlaceRelationshipExists(PlaceBean parent, PlaceBean child) {
         // parent should have child relationship to child
-        Node parentNode = nodeIndex.get(PlaceNodeMapper.PlaceNodeProperties.LOC_ID.name(), parent.getId()).getSingle();
-        Node childNode = nodeIndex.get(PlaceNodeMapper.PlaceNodeProperties.LOC_ID.name(), child.getId()).getSingle();
+        Node parentNode = lookUpPlaceByLocId(parent);
+        Node childNode = lookUpPlaceByLocId(child);
 
         assertTrue(parentNode.hasRelationship(Direction.INCOMING, PlaceRelationshipBuilder.Relationships.PART_OF));
 
@@ -220,5 +225,35 @@ public class PlaceRelationshipBuilderTest extends AbstractGraphDbTest {
             tx.finish();
         }
 
+    }
+    
+    private Node lookUpPostalCodeByPlz(PlzTabBean plzBean) {
+        Label plzLabel = DynamicLabel.label(OpenGeoDbProperties.POSTAL_CODE_LABEL);
+        ResourceIterator<Node> plzIterator = graphDb
+                .findNodesByLabelAndProperty(
+                        plzLabel, 
+                        OpenGeoDbProperties.PlzProperties.POSTAL_CODE.name(), 
+                        plzBean.getPlz())
+                .iterator();
+        try {
+            return plzIterator.next(); 
+        } finally {
+            plzIterator.close();
+        }
+    }
+
+    private Node lookUpPlaceByLocId(PlaceBean place) {
+        Label locLabel = DynamicLabel.label(OpenGeoDbProperties.OPENGEO_DB_LOCATION);
+        ResourceIterator<Node> placeIterator = graphDb
+                                                .findNodesByLabelAndProperty(
+                                                        locLabel, 
+                                                        OpenGeoDbProperties.LOC_ID, 
+                                                        place.getId())
+                .iterator();
+        try {
+            return placeIterator.next(); 
+        } finally {
+            placeIterator.close();
+        }
     }
 }

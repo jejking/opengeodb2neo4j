@@ -15,6 +15,7 @@
  */
 package info.jejking.opengeodb.neo4j.importer;
 
+import static info.jejking.opengeodb.neo4j.importer.SchemaCreator.createSchema;
 import info.jejking.opengeodb.neo4j.importer.PlaceParser.PlaceBean;
 import info.jejking.opengeodb.neo4j.importer.PlzParser.PlzTabBean;
 
@@ -31,7 +32,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.index.Index;
 
 /**
  * Class which integrates the parsers together with the node and relationship builders to turn the TAB-separated exports
@@ -47,7 +47,6 @@ public class Importer {
     private List<PlaceBean> placeBeans;
     private List<PlzTabBean> plzBeans;
     private GraphDatabaseService graphDb;
-    private Index<Node> nodeIndex;
     private Map<Integer, Node> placeNodeMap;
     private Map<String, Node> plzNodeMap;
 
@@ -101,6 +100,9 @@ public class Importer {
             }
         });
 
+        graphDb.shutdown();
+        LOGGER.info("Shut down graph db");
+        
         LOGGER.info("Done!");
     }
 
@@ -122,7 +124,7 @@ public class Importer {
         PlaceNodeMapper placeNodeMapper = new PlaceNodeMapper();
         this.placeNodeMap = new HashMap<>();
         for (PlaceBean placeBean : this.placeBeans) {
-            Node placeNode = placeNodeMapper.createPlaceNode(graphDb, nodeIndex, placeBean);
+            Node placeNode = placeNodeMapper.createPlaceNode(graphDb, placeBean);
             this.placeNodeMap.put(placeBean.getId(), placeNode);
         }
     }
@@ -131,7 +133,7 @@ public class Importer {
         PlzNodeMapper plzNodeMapper = new PlzNodeMapper();
         this.plzNodeMap = new HashMap<>();
         for (PlzTabBean plzBean : this.plzBeans) {
-            Node plzNode = plzNodeMapper.createPlzNode(graphDb, nodeIndex, plzBean);
+            Node plzNode = plzNodeMapper.createPlzNode(graphDb, plzBean);
             this.plzNodeMap.put(plzBean.getPlz(), plzNode);
         }
     }
@@ -145,19 +147,13 @@ public class Importer {
 
     private void createDatabase(String dbDir) {
         this.graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(dbDir);
-        this.nodeIndex = graphDb.index().forNodes("nodes");
+        
+        createSchema(this.graphDb);
 
-        // and register shutdown hook
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-
-            @Override
-            public void run() {
-                graphDb.shutdown();
-                LOGGER.info("Shutdown graph db instance");
-            }
-        });
         LOGGER.info("Created graph db in directory " + dbDir);
     }
+
+    
 
     private void parsePlz(String plzFile) throws IOException {
         PlzParser plzParser = new PlzParser();

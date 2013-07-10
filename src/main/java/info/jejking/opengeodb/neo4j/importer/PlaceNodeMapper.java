@@ -15,11 +15,12 @@
  */
 package info.jejking.opengeodb.neo4j.importer;
 
+import info.jejking.opengeodb.neo4j.importer.OpenGeoDbProperties.PlaceNodeProperties;
 import info.jejking.opengeodb.neo4j.importer.PlaceParser.PlaceBean;
 
+import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.index.Index;
 
 /**
  * Class with functionality to create a {@link Node} corresponding to a {@link PlaceBean}.
@@ -28,96 +29,31 @@ import org.neo4j.graphdb.index.Index;
  * 
  */
 public class PlaceNodeMapper {
-
-    /**
-     * Property names corresponding for a given subset of the properties in a line of the tab-delimited file. Postal
-     * codes and hierarchical containment are (obviously) not mapped as node properties but as relationships.
-     */
-    enum PlaceNodeProperties {
-        /**
-         * The ID in OpenGeoDB.
-         */
-        LOC_ID,
-        /**
-         * Amtlicher Gemeinde-Schlüssel. German ID for the administrative area.
-         */
-        AGS,
-        /**
-         * Name in capitals and ASCII only - i.e. without any German characters.
-         */
-        ASCII,
-        /**
-         * Name in mixed upper and lower case, as usual. Contains German characters.
-         */
-        NAME,
-        /**
-         * Latitude in degrees, as double.
-         */
-        LATITUDE,
-        /**
-         * Longitude in degrees, as double.
-         */
-        LONGITUDE,
-        /**
-         * Where given, the nearest official local government office for citizens' affairs.
-         */
-        AMT,
-        /**
-         * Dialing code.
-         */
-        DIALING_CODE,
-        /**
-         * Population.
-         */
-        POPULATION,
-        /**
-         * Area, in square kilometers.
-         */
-        AREA,
-        /**
-         * The first part of the German number plate, indicating region of origin.
-         */
-        NUMBER_PLATE_CODE,
-        /**
-         * The "type" of place, in German - e.g. city, federal state, commune.
-         */
-        TYPE,
-        /**
-         * The level in the OpenGeoDB hierarchy.
-         */
-        LEVEL,
-        /**
-         * Some indication of validity - 1 meaning "invalid", 0 meaning "valid" and its absence also indicating
-         * validity.
-         */
-        INVALID;
-    }
-
+    
     /**
      * Creates the node for a place. Properties are mapped across. The OpenGeoDb ID and the name are indexed.
      * 
      * @param graphDb
      *            the graph db service
-     * @param nodeIndex
-     *            a node index
      * @param placeBean
      *            the place for which to create a node
      * @return node with properties set
      */
-    public Node createPlaceNode(GraphDatabaseService graphDb, Index<Node> nodeIndex, PlaceBean placeBean) {
-        // TODO. Consider use of Labels and auto-indexing
-        Node node = graphDb.createNode();
-        node.setProperty(PlaceNodeProperties.LOC_ID.name(), placeBean.getId());
+    public Node createPlaceNode(GraphDatabaseService graphDb, PlaceBean placeBean) {
+        Node node = graphDb.createNode(
+                            DynamicLabel.label(OpenGeoDbProperties.PLACE_LABEL),
+                            DynamicLabel.label(OpenGeoDbProperties.OPENGEO_DB_LOCATION));
+        
+        
+        node.setProperty(OpenGeoDbProperties.LOC_ID, placeBean.getId());
         if (placeBean.getAgs() != null) {
             node.setProperty(PlaceNodeProperties.AGS.name(), placeBean.getAgs());
-            nodeIndex.add(node, PlaceNodeProperties.LOC_ID.name(), placeBean.getId());
         }
         if (placeBean.getAscii() != null) {
             node.setProperty(PlaceNodeProperties.ASCII.name(), placeBean.getAscii());
         }
         if (placeBean.getName() != null) {
             node.setProperty(PlaceNodeProperties.NAME.name(), placeBean.getName());
-            nodeIndex.add(node, PlaceNodeProperties.NAME.name(), placeBean.getName());
         }
         if (placeBean.getLat() > 0) {
             node.setProperty(PlaceNodeProperties.LATITUDE.name(), placeBean.getLat());
@@ -142,6 +78,7 @@ public class PlaceNodeMapper {
         }
         if (placeBean.getTyp() != null) {
             node.setProperty(PlaceNodeProperties.TYPE.name(), placeBean.getTyp());
+            node.addLabel(DynamicLabel.label(placeBean.getTyp()));
         }
         if (placeBean.getLevel() > 0) {
             node.setProperty(PlaceNodeProperties.LEVEL.name(), placeBean.getLevel());

@@ -18,9 +18,9 @@ package info.jejking.opengeodb.neo4j.importer;
 import org.junit.After;
 import org.junit.Before;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.index.Index;
 import org.neo4j.test.TestGraphDatabaseFactory;
+
+import static info.jejking.opengeodb.neo4j.importer.SchemaCreator.createSchema;
 
 /**
  * Helper class for constructing and destroying in-memory, non-persistent
@@ -31,7 +31,6 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 public abstract class AbstractGraphDbTest {
 
     protected GraphDatabaseService graphDb;
-    protected Index<Node> nodeIndex;
 
     /**
      * Constructor.
@@ -47,7 +46,7 @@ public abstract class AbstractGraphDbTest {
     @Before
     public void setUpDatabase() {
         this.graphDb = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        this.nodeIndex = graphDb.index().forNodes("nodes");
+        createSchema(graphDb);
     }
 
     /**
