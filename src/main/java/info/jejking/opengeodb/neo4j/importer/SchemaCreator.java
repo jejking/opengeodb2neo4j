@@ -15,13 +15,11 @@
  */
 package info.jejking.opengeodb.neo4j.importer;
 
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 
 /**
@@ -37,36 +35,38 @@ class SchemaCreator {
      * @param args
      */
     public static void createSchema(GraphDatabaseService graphDb) {
-        Schema schema = graphDb.schema();
+       
         Transaction tx = graphDb.beginTx();
-
+        LOGGER.info("Creating schema");
+        Schema schema = graphDb.schema();
         try {
-            schema.indexFor(
-                        DynamicLabel.label(OpenGeoDbProperties.OPENGEO_DB_LOCATION))
-                        .on(OpenGeoDbProperties.LOC_ID)
-                        .create();
+            schema.indexFor(DynamicLabel.label(OpenGeoDbProperties.OPENGEO_DB_LOCATION))
+                             .on(OpenGeoDbProperties.LOC_ID)
+                             .create();
 
-            schema.indexFor(
-                    DynamicLabel.label(OpenGeoDbProperties.PLACE_LABEL))
-                    .on(OpenGeoDbProperties.PlaceNodeProperties.NAME.name())
-                    .create();
+            LOGGER.info("Created index for loc id");
+            
+            schema.indexFor(DynamicLabel.label(OpenGeoDbProperties.PLACE_LABEL))
+                             .on(OpenGeoDbProperties.PlaceNodeProperties.NAME.name())
+                             .create();
 
-            schema.indexFor(
-                    DynamicLabel.label(OpenGeoDbProperties.POSTAL_CODE_LABEL))
-                    .on(OpenGeoDbProperties.PlzProperties.POSTAL_CODE.name())
-                    .create();
+            LOGGER.info("Created index for place name");
+            
+            schema.indexFor(DynamicLabel.label(OpenGeoDbProperties.POSTAL_CODE_LABEL))
+                             .on(OpenGeoDbProperties.PlzProperties.POSTAL_CODE.name())
+                             .create();
+            
+            LOGGER.info("Created index for postal code");
+            
             tx.success();
         } finally {
             tx.finish();
         }
-        // shouldn't take long as db is empty ;)
-        schema.awaitIndexesOnline(5, TimeUnit.SECONDS);
+        
 
         LOGGER.info("Created schema with indexes");
         
-        for (IndexDefinition idxDef : schema.getIndexes()) {
-            LOGGER.fine(idxDef.toString());
-        }
+  
     }
 
 }

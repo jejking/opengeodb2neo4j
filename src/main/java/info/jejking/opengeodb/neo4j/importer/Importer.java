@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -32,6 +33,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.schema.Schema;
 
 /**
  * Class which integrates the parsers together with the node and relationship builders to turn the TAB-separated exports
@@ -65,11 +67,11 @@ public class Importer {
      */
     public void doImport(String placeFile, String plzFile, String dbDir) throws IOException {
         LOGGER.info("Starting import");
-        parsePlaces(placeFile);
-        parsePlz(plzFile);
 
-        createDatabase(dbDir);
-
+        setUpDatabase(dbDir);
+        
+        loadOpenGeoDbDataFromFiles(placeFile, plzFile);
+        
         // currently runs in separate transactions in order to keep memory overhead
         // for the Neo4j tx processing under control
         // TODO consider using bulk importer
@@ -104,6 +106,28 @@ public class Importer {
         LOGGER.info("Shut down graph db");
         
         LOGGER.info("Done!");
+    }
+
+    private void loadOpenGeoDbDataFromFiles(String placeFile, String plzFile) throws IOException {
+        parsePlaces(placeFile);
+        parsePlz(plzFile);
+    }
+
+    private void setUpDatabase(String dbDir) {
+        createDatabase(dbDir);
+        waitForIndexesToComeOnline();
+    }
+
+    private void waitForIndexesToComeOnline() {
+        Transaction tx = graphDb.beginTx();
+        try {
+            Schema schema = graphDb.schema();
+            schema.awaitIndexesOnline(10, TimeUnit.SECONDS);
+            LOGGER.info("Indexes now online");
+        } finally {
+            tx.finish();
+        }
+        
     }
 
     private void doInTransaction(Runnable runnable) {
