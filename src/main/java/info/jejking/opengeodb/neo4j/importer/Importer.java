@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -119,29 +118,20 @@ public class Importer {
     }
 
     private void waitForIndexesToComeOnline() {
-        Transaction tx = graphDb.beginTx();
-        try {
+        
+        try (Transaction tx = graphDb.beginTx()) {
             Schema schema = graphDb.schema();
             schema.awaitIndexesOnline(10, TimeUnit.SECONDS);
             LOGGER.info("Indexes now online");
-        } finally {
-            tx.finish();
         }
         
     }
 
     private void doInTransaction(Runnable runnable) {
-        Transaction tx = graphDb.beginTx();
-        try {
+        try (Transaction tx = graphDb.beginTx()) {
             runnable.run();
             tx.success();
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Transaction Failed", e);
-            tx.failure();
-        } finally {
-            tx.finish();
         }
-
     }
 
     private void createPlaceNodes() {

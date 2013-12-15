@@ -54,21 +54,39 @@ public class PlaceRelationshipBuilderTest extends AbstractGraphDbTest {
     @Test
     public void shouldBuildPlaceRelationships() {
 
-        givenPlaceNodes(hamburg, hamburgNord);
+        try ( Transaction tx = graphDb.beginTx() )
+        {
+            // operations on the graph
+            // ...
+            givenPlaceNodes(hamburg, hamburgNord);
 
-        whenThePlaceRelationshipsAreBuilt(hamburgNord);
+            whenThePlaceRelationshipsAreBuilt(hamburgNord);
 
-        thenPlaceRelationshipExists(hamburg, hamburgNord);
+            thenPlaceRelationshipExists(hamburg, hamburgNord);
+            tx.success();
+        }
+        
+        
+    
     }
 
     @Test
     public void shouldBuildPostalCodeRelationships() {
-        givenPlaceNodes(uhlenhorst);
-        givenPostalCodes(plz22081, plz22085, plz22087);
+        
+        try ( Transaction tx = graphDb.beginTx() )
+        {
+            // operations on the graph
+            // ...
+            givenPlaceNodes(uhlenhorst);
+            givenPostalCodes(plz22081, plz22085, plz22087);
 
-        whenThePostalCodeRelationshipsAreBuilt(uhlenhorst);
+            whenThePostalCodeRelationshipsAreBuilt(uhlenhorst);
 
-        thenPostalCodeRelationshipsExist(uhlenhorst, plz22081, plz22085, plz22087);
+            thenPostalCodeRelationshipsExist(uhlenhorst, plz22081, plz22085, plz22087);
+            tx.success();
+        }
+        
+        
 
     }
 
@@ -99,53 +117,36 @@ public class PlaceRelationshipBuilderTest extends AbstractGraphDbTest {
     }
 
     private void whenThePostalCodeRelationshipsAreBuilt(PlaceBean placeBean) {
-        Transaction tx = graphDb.beginTx();
+        
         PlaceRelationshipBuilder prb = new PlaceRelationshipBuilder();
-        try {
-            prb.buildPostalCodeRelationships(graphDb, placeNodeMap, plzNodeMap, placeBean);
-            tx.success();
-        } catch (Exception e) {
-            tx.failure();
-        } finally {
-            tx.finish();
-        }
+        prb.buildPostalCodeRelationships(graphDb, placeNodeMap, plzNodeMap, placeBean);
+        
     }
 
     private void givenPostalCodes(PlzTabBean... plzBeans) {
         this.plzNodeMap = new HashMap<>();
 
-        Transaction tx = this.graphDb.beginTx();
         PlzNodeMapper plzNodeMapper = new PlzNodeMapper();
-        try {
-            for (PlzTabBean plzBean : plzBeans) {
-                Node plzNode = plzNodeMapper.createPlzNode(graphDb, plzBean);
-                this.plzNodeMap.put(plzBean.getPlz(), plzNode);
-            }
-            tx.success();
-        } catch (Exception e) {
-            tx.failure();
-        } finally {
-            tx.finish();
+ 
+        for (PlzTabBean plzBean : plzBeans) {
+            Node plzNode = plzNodeMapper.createPlzNode(graphDb, plzBean);
+            this.plzNodeMap.put(plzBean.getPlz(), plzNode);
         }
+           
     }
 
     private void givenPlaceNodes(PlaceBean... beans) {
 
         this.placeNodeMap = new HashMap<>();
 
-        Transaction tx = this.graphDb.beginTx();
+  
         PlaceNodeMapper placeNodeMapper = new PlaceNodeMapper();
-        try {
-            for (PlaceBean bean : beans) {
-                Node placeNode = placeNodeMapper.createPlaceNode(graphDb, bean);
-                this.placeNodeMap.put(bean.getId(), placeNode);
-            }
-            tx.success();
-        } catch (Exception e) {
-            tx.failure();
-        } finally {
-            tx.finish();
+   
+        for (PlaceBean bean : beans) {
+            Node placeNode = placeNodeMapper.createPlaceNode(graphDb, bean);
+            this.placeNodeMap.put(bean.getId(), placeNode);
         }
+   
     }
 
     private PlaceBean hamburg() {
@@ -214,16 +215,12 @@ public class PlaceRelationshipBuilderTest extends AbstractGraphDbTest {
     }
 
     private void whenThePlaceRelationshipsAreBuilt(PlaceBean place) {
-        Transaction tx = graphDb.beginTx();
+   
         PlaceRelationshipBuilder prb = new PlaceRelationshipBuilder();
-        try {
-            prb.buildPartOfRelationshipForPlace(graphDb, placeNodeMap, place);
-            tx.success();
-        } catch (Exception e) {
-            tx.failure();
-        } finally {
-            tx.finish();
-        }
+ 
+        prb.buildPartOfRelationshipForPlace(graphDb, placeNodeMap, place);
+        
+ 
 
     }
     

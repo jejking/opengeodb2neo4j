@@ -40,13 +40,24 @@ public class PlzNodeMapperTest extends AbstractGraphDbTest {
 
     @Test
     public void shouldCreatePlzNodeFromBean() {
-        givenAPlzBean();
+        
+        
+        try ( Transaction tx = graphDb.beginTx() )
+        {
+            givenAPlzBean();
 
-        whenTheNodeIsCreated();
+            whenTheNodeIsCreated();
+            tx.success();
+        }
+        
+        try ( Transaction tx = graphDb.beginTx() )
+        {
 
-        thenItCanBeFound();
-        thenItIsIndexed();
-        thenTheDataMatches();
+            thenItCanBeFound();
+            thenItIsIndexed();
+            thenTheDataMatches();
+        }
+        
     }
 
     private void givenAPlzBean() {
@@ -55,24 +66,17 @@ public class PlzNodeMapperTest extends AbstractGraphDbTest {
     }
 
     private void whenTheNodeIsCreated() {
-        Transaction tx = this.graphDb.beginTx();
-        try {
-            this.plzNode = this.plzMapper.createPlzNode(graphDb, plzBean);
-            tx.success();
-        } catch (Exception e) {
-            tx.failure();
-        } finally {
-            tx.finish();
-        }
-
+        this.plzNode = this.plzMapper.createPlzNode(graphDb, plzBean);
     }
 
     private void thenItCanBeFound() {
+
         Node found = this.graphDb.getNodeById(this.plzNode.getId());
         assertNotNull(found);
     }
 
     private void thenItIsIndexed() {
+        
         
         Label plzLabel = DynamicLabel.label(OpenGeoDbProperties.POSTAL_CODE_LABEL);
         Label openGeoDbLocLabel = DynamicLabel.label(OpenGeoDbProperties.OPENGEO_DB_LOCATION);
@@ -100,6 +104,9 @@ public class PlzNodeMapperTest extends AbstractGraphDbTest {
         } finally {
             plzByPlz.close();
         }
+
+        
+       
 
     }
 

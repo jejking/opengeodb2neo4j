@@ -42,13 +42,17 @@ public class PlaceNodeMapperTest extends AbstractGraphDbTest {
 
     @Test
     public void shouldCreateANodeFromAPlaceBean() {
-        givenAPlaceBean();
+        
+        try (Transaction tx = graphDb.beginTx())  {
+            givenAPlaceBean();
 
-        whenTheNodeIsCreated();
+            whenTheNodeIsCreated();
 
-        thenItCanBeFound();
-        thenItIsIndexed();
-        thenTheDataMatches();
+            thenItCanBeFound();
+            thenItIsIndexed();
+            thenTheDataMatches();
+            tx.success();
+        }
     }
 
     private void thenTheDataMatches() {
@@ -89,16 +93,7 @@ public class PlaceNodeMapperTest extends AbstractGraphDbTest {
     }
 
     private void whenTheNodeIsCreated() {
-        Transaction tx = this.graphDb.beginTx();
-        try {
-            this.placeNode = this.placeNodeMapper.createPlaceNode(graphDb, placeBean);
-            tx.success();
-        } catch (Exception e) {
-            tx.failure();
-        } finally {
-            tx.finish();
-        }
-
+       this.placeNode = this.placeNodeMapper.createPlaceNode(graphDb, placeBean);
     }
 
     private void thenItCanBeFound() {

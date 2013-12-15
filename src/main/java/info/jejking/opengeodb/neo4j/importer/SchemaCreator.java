@@ -36,10 +36,9 @@ class SchemaCreator {
      */
     public static void createSchema(GraphDatabaseService graphDb) {
        
-        Transaction tx = graphDb.beginTx();
         LOGGER.info("Creating schema");
-        Schema schema = graphDb.schema();
-        try {
+        try (Transaction tx = graphDb.beginTx()) {
+            Schema schema = graphDb.schema();
             schema.indexFor(DynamicLabel.label(OpenGeoDbProperties.OPENGEO_DB_LOCATION))
                              .on(OpenGeoDbProperties.LOC_ID)
                              .create();
@@ -59,10 +58,7 @@ class SchemaCreator {
             LOGGER.info("Created index for postal code");
             
             tx.success();
-        } finally {
-            tx.finish();
         }
-        
 
         LOGGER.info("Created schema with indexes");
         
